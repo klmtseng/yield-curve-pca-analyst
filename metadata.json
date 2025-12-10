@@ -1,0 +1,5 @@
+{
+  "name": "Yield Curve PCA Analyst",
+  "description": "Interactive Principal Component Analysis tool for US Treasury Yield Curves. Visualizes Level, Slope, and Curvature factors with automated statistical market regime analysis.",
+  "requestFramePermissions": []
+}

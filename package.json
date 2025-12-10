@@ -1,0 +1,28 @@
+{
+  "name": "yield-curve-pca-analyst",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Interactive Principal Component Analysis tool for US Treasury Yield Curves with automated statistical regime detection",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "react": "^19.2.1",
+    "react-dom": "^19.2.1",
+    "react-markdown": "^10.1.0",
+    "recharts": "^3.5.1"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.1",
+    "@types/react-dom": "^19.2.1",
+    "@vitejs/plugin-react": "^4.2.1",
+    "autoprefixer": "^10.4.19",
+    "postcss": "^8.4.38",
+    "tailwindcss": "^3.4.3",
+    "typescript": "^5.4.5",
+    "vite": "^5.2.11"
+  }
+}
