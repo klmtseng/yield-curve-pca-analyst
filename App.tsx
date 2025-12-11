@@ -18,6 +18,8 @@ import BenchmarkYieldsChart from './components/BenchmarkYieldsChart';
 import RichCheapAnalysis from './components/RichCheapAnalysis';
 import FredDataModal from './components/FredDataModal';
 import DataReviewModal from './components/DataReviewModal';
+import RotatableSurfaceChart from './components/RotatableSurfaceChart';
+import BacktestDashboard from './components/BacktestDashboard';
 
 const App: React.FC = () => {
   const [data, setData] = useState<YieldCurvePoint[]>([]);
@@ -220,16 +222,46 @@ const App: React.FC = () => {
             </div>
             
             {/* Third Row: Rolling Variance & Loadings Surface */}
-            <div className="lg:col-span-5 h-[350px]">
+            <div className="lg:col-span-6 h-[350px]">
                <RollingVarianceChart data={data} tenors={activeTenors} />
             </div>
 
-             <div className="lg:col-span-7 h-[350px]">
+             <div className="lg:col-span-6 h-[350px]">
                <RollingLoadingsSurface data={data} tenors={activeTenors} />
             </div>
 
-            {/* Bottom Row: Trading Strategy & Benchmarks */}
-            <div className="lg:col-span-12 mt-4 mb-2">
+            {/* NEW SECTION: 3D Visualization */}
+            <div className="lg:col-span-12 mt-8 mb-2">
+               <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                 <span className="w-1 h-6 bg-purple-500 rounded-full"></span>
+                 3D Market Structure
+               </h2>
+            </div>
+
+            <div className="lg:col-span-6 h-[400px]">
+               {/* 3D Yield Curve */}
+               <RotatableSurfaceChart 
+                  data={data} 
+                  tenors={activeTenors} 
+                  type="yield" 
+                  height={400} 
+                  width={600}
+                />
+            </div>
+
+            <div className="lg:col-span-6 h-[400px]">
+               {/* 3D Rich/Cheap Surface */}
+               <RotatableSurfaceChart 
+                  data={data} 
+                  tenors={activeTenors} 
+                  type="residual" 
+                  height={400}
+                  width={600} 
+                />
+            </div>
+
+            {/* Trading Strategy & Benchmarks */}
+            <div className="lg:col-span-12 mt-8 mb-2">
                <h2 className="text-xl font-bold text-white flex items-center gap-2">
                  <span className="w-1 h-6 bg-emerald-500 rounded-full"></span>
                  Trading Strategy & Benchmarks
@@ -242,6 +274,11 @@ const App: React.FC = () => {
 
             <div className="lg:col-span-4 h-[350px]">
                <RichCheapAnalysis rawData={data} pcaData={pcaResults} />
+            </div>
+
+            {/* Backtester Panel */}
+            <div className="lg:col-span-12 h-[450px]">
+               <BacktestDashboard data={data} tenors={activeTenors} />
             </div>
            </>
         )}
