@@ -103,12 +103,6 @@ export const runPCABacktest = (
       const residual = actualYield - modelYield; // Cheap if > 0, Rich if < 0
       
       // Calculate historical residual std dev from the window for Z-Score
-      // (Simplified: taking residual of just today vs historical model fits is cleaner, 
-      // but computationally we'll estimate std dev from the PCA variance)
-      // Heuristic: Use ~10bps as base volatility or calculate from window. 
-      // Let's approximate Z-Score by analyzing residuals of the window.
-      
-      // Re-calculate window residuals to get StdDev
       let sumSqRes = 0;
       for(let w=0; w<windowData.length; w++) {
          const wScores = scores[w];
@@ -141,8 +135,20 @@ export const runPCABacktest = (
         const isLong = existingPos.direction === 1;
         // Close if Z-score flips sign or goes to neutral
         if ((isLong && zScore < 0) || (!isLong && zScore > 0)) {
+          const duration = DURATION_MAP[tenor] || 5;
+          // Calculate Realized PnL
+          // PnL = -Duration * (ExitYield - EntryYield) * Direction
+          const realizedPnL = -1 * (actualYield - existingPos.entryYield) * duration * existingPos.direction * 100;
+          
           activePositions.delete(tenor);
-          trades.push({ date: today.date, tenor, type: 'CLOSE', entryYield: existingPos.entryYield, exitYield: actualYield });
+          trades.push({ 
+            date: today.date, 
+            tenor, 
+            type: 'CLOSE', 
+            entryYield: existingPos.entryYield, 
+            exitYield: actualYield,
+            pnl: realizedPnL
+          });
         }
       }
     });
@@ -163,6 +169,11 @@ export const runPCABacktest = (
     if (dd > maxDD) maxDD = dd;
   });
 
+  // Win Rate
+  const closedTrades = trades.filter(t => t.type === 'CLOSE');
+  const winningTrades = closedTrades.filter(t => (t.pnl || 0) > 0);
+  const winRate = closedTrades.length > 0 ? winningTrades.length / closedTrades.length : 0;
+
   return {
     dates,
     equityCurve,
@@ -171,7 +182,7 @@ export const runPCABacktest = (
       totalReturn: equityCurve[equityCurve.length - 1],
       sharpeRatio: sharpe,
       maxDrawdown: maxDD,
-      winRate: 0, // Todo: calc from closed trades
+      winRate: winRate,
       totalTrades: trades.length
     }
   };

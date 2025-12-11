@@ -74,12 +74,13 @@ const BacktestDashboard: React.FC<Props> = ({ data, tenors }) => {
 
       {/* Results */}
       {result ? (
-        <div className="flex-grow flex flex-col gap-6">
-           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="flex-grow flex flex-col gap-6 overflow-hidden">
+           {/* Summary Stats */}
+           <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
               <div className="bg-slate-700/30 p-3 rounded border border-slate-600">
                 <div className="text-xs text-slate-400">Total Return</div>
                 <div className={`text-xl font-mono font-bold ${result.stats.totalReturn >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                  {result.stats.totalReturn.toFixed(0)} <span className="text-sm text-slate-500">units</span>
+                  {result.stats.totalReturn.toFixed(0)}
                 </div>
               </div>
               <div className="bg-slate-700/30 p-3 rounded border border-slate-600">
@@ -94,15 +95,22 @@ const BacktestDashboard: React.FC<Props> = ({ data, tenors }) => {
                   {result.stats.maxDrawdown.toFixed(0)}
                 </div>
               </div>
+               <div className="bg-slate-700/30 p-3 rounded border border-slate-600">
+                <div className="text-xs text-slate-400">Win Rate</div>
+                <div className="text-xl font-mono font-bold text-emerald-400">
+                  {(result.stats.winRate * 100).toFixed(0)}%
+                </div>
+              </div>
               <div className="bg-slate-700/30 p-3 rounded border border-slate-600">
-                <div className="text-xs text-slate-400">Trades Executed</div>
+                <div className="text-xs text-slate-400">Total Trades</div>
                 <div className="text-xl font-mono font-bold text-slate-200">
                   {result.stats.totalTrades}
                 </div>
               </div>
            </div>
 
-           <div className="flex-grow min-h-[200px] border border-slate-700 bg-slate-900/30 rounded-lg p-2">
+           {/* Equity Curve */}
+           <div className="h-[180px] border border-slate-700 bg-slate-900/30 rounded-lg p-2">
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={chartData}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
@@ -114,6 +122,52 @@ const BacktestDashboard: React.FC<Props> = ({ data, tenors }) => {
                   <Line type="monotone" dataKey="equity" stroke="#34d399" strokeWidth={2} dot={false} />
                 </LineChart>
               </ResponsiveContainer>
+           </div>
+           
+           {/* Trades Log */}
+           <div className="flex-grow overflow-hidden flex flex-col">
+              <h4 className="text-sm font-semibold text-slate-300 mb-2">Trade Log</h4>
+              <div className="flex-grow overflow-auto custom-scrollbar border border-slate-700 rounded-lg bg-slate-900/30">
+                  <table className="w-full text-xs text-left text-slate-300">
+                      <thead className="bg-slate-800 text-slate-400 sticky top-0">
+                          <tr>
+                              <th className="px-3 py-2">Date</th>
+                              <th className="px-3 py-2">Tenor</th>
+                              <th className="px-3 py-2">Action</th>
+                              <th className="px-3 py-2 text-right">Entry</th>
+                              <th className="px-3 py-2 text-right">Exit</th>
+                              <th className="px-3 py-2 text-right">PnL</th>
+                          </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-700/50">
+                          {[...result.trades].reverse().map((trade, idx) => (
+                              <tr key={idx} className="hover:bg-slate-800/20">
+                                  <td className="px-3 py-2 font-mono whitespace-nowrap">{trade.date}</td>
+                                  <td className="px-3 py-2 font-mono text-indigo-300">{trade.tenor}</td>
+                                  <td className="px-3 py-2">
+                                      <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${
+                                          trade.type === 'BUY' ? 'bg-emerald-900/50 text-emerald-400' :
+                                          trade.type === 'SELL' ? 'bg-red-900/50 text-red-400' :
+                                          'bg-slate-700 text-slate-300'
+                                      }`}>
+                                          {trade.type}
+                                      </span>
+                                  </td>
+                                  <td className="px-3 py-2 text-right font-mono">{trade.entryYield.toFixed(3)}%</td>
+                                  <td className="px-3 py-2 text-right font-mono">
+                                      {trade.exitYield ? `${trade.exitYield.toFixed(3)}%` : '-'}
+                                  </td>
+                                  <td className={`px-3 py-2 text-right font-mono font-bold ${
+                                      (trade.pnl || 0) > 0 ? 'text-emerald-400' : 
+                                      (trade.pnl || 0) < 0 ? 'text-red-400' : 'text-slate-500'
+                                  }`}>
+                                      {trade.pnl ? trade.pnl.toFixed(1) : '-'}
+                                  </td>
+                              </tr>
+                          ))}
+                      </tbody>
+                  </table>
+              </div>
            </div>
         </div>
       ) : (
