@@ -12,6 +12,8 @@ import ScreePlot from './components/ScreePlot';
 import ScoreTimeSeries from './components/ScoreTimeSeries';
 import AnalysisPanel from './components/AnalysisPanel';
 import YieldSurface from './components/YieldSurface';
+import RollingVarianceChart from './components/RollingVarianceChart';
+import RollingLoadingsSurface from './components/RollingLoadingsSurface';
 import FredDataModal from './components/FredDataModal';
 import DataReviewModal from './components/DataReviewModal';
 
@@ -36,7 +38,7 @@ const App: React.FC = () => {
 
   const handleLoadMockData = useCallback(() => {
     // 1. Generate Data
-    const mockData = generateMockData(60); // 60 days
+    const mockData = generateMockData(90); // 90 days for better rolling view
     setData(mockData);
     setActiveTenors(TENORS);
 
@@ -186,7 +188,7 @@ const App: React.FC = () => {
       </header>
 
       {/* Main Grid */}
-      <main className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-6">
+      <main className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-6 pb-12">
         
         {/* Top Row: Key Metrics */}
         {pcaResults && (
@@ -211,19 +213,23 @@ const App: React.FC = () => {
             </div>
 
             {/* Middle Row: Scores Time Series */}
-            <div className="lg:col-span-8 h-[350px]">
+            <div className="lg:col-span-12 h-[350px]">
                <ScoreTimeSeries pcaData={pcaResults} rawData={data} />
             </div>
+            
+            {/* Bottom Row: Rolling Variance & Loadings Surface */}
+            <div className="lg:col-span-5 h-[350px]">
+               <RollingVarianceChart data={data} tenors={activeTenors} />
+            </div>
 
-            {/* Middle Row: Curve Visualization */}
-            <div className="lg:col-span-4 h-[350px]">
-               <YieldSurface data={data} />
+             <div className="lg:col-span-7 h-[350px]">
+               <RollingLoadingsSurface data={data} tenors={activeTenors} />
             </div>
            </>
         )}
       </main>
       
-      <footer className="max-w-7xl mx-auto mt-12 text-center text-slate-500 text-sm pb-8">
+      <footer className="max-w-7xl mx-auto border-t border-slate-800 text-center text-slate-500 text-sm py-8">
         <p>PCA computed client-side using Jacobi Algorithm.</p>
         <p className="mt-1 opacity-75">Supported CSV Headers: Date, 1M, 3M, 6M, 1Y, 2Y, 3Y, 5Y, 7Y, 10Y, 20Y, 30Y</p>
       </footer>

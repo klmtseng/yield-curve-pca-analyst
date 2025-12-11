@@ -3,17 +3,24 @@ import { PCAResult } from '../types';
 
 export const generateInterpretation = (pca: PCAResult, dates: { start: string, end: string }): string => {
   const { eigenvectors, scores, explainedVariance, tenors } = pca;
-  const pc1Exp = (explainedVariance[0] * 100).toFixed(1);
-  const pc2Exp = (explainedVariance[1] * 100).toFixed(1);
-  const pc3Exp = (explainedVariance[2] * 100).toFixed(1);
+  
+  if (!explainedVariance || explainedVariance.length === 0) {
+    return "Insufficient data to generate interpretation.";
+  }
+
+  const formatPct = (val: number) => isNaN(val) ? "N/A" : (val * 100).toFixed(1);
+
+  const pc1Exp = formatPct(explainedVariance[0]);
+  const pc2Exp = formatPct(explainedVariance[1]);
+  const pc3Exp = formatPct(explainedVariance[2]); // Not used directly in text but good to have ready
 
   // 1. Analyze Level (PC1)
   const pc1Loadings = eigenvectors[0];
-  const avgLoading1 = pc1Loadings.reduce((a, b) => a + b, 0) / pc1Loadings.length;
+  const avgLoading1 = pc1Loadings ? pc1Loadings.reduce((a, b) => a + b, 0) / pc1Loadings.length : 0;
   // Direction: If avg loading is positive, positive score = higher rates
   const directionPC1 = avgLoading1 > 0 ? 1 : -1;
-  const score1Start = scores[0][0];
-  const score1End = scores[scores.length - 1][0];
+  const score1Start = scores.length > 0 ? scores[0][0] : 0;
+  const score1End = scores.length > 0 ? scores[scores.length - 1][0] : 0;
   const levelChange = (score1End - score1Start) * directionPC1;
   
   let levelTrend = "remained relatively stable";
@@ -28,14 +35,14 @@ export const generateInterpretation = (pca: PCAResult, dates: { start: string, e
   const idx2Y = tenors.indexOf('2Y') > -1 ? tenors.indexOf('2Y') : 0;
   const idx10Y = tenors.indexOf('10Y') > -1 ? tenors.indexOf('10Y') : tenors.length - 1;
   
-  const pc2Loadings = eigenvectors[1];
+  const pc2Loadings = eigenvectors[1] || [];
   // Calculate slope gradient: Long loading - Short loading
-  const slopeGradient = pc2Loadings[idx10Y] - pc2Loadings[idx2Y];
+  const slopeGradient = pc2Loadings.length > 0 ? pc2Loadings[idx10Y] - pc2Loadings[idx2Y] : 0;
   
   // If gradient > 0, positive score = steeper (Long > Short)
   const directionPC2 = slopeGradient > 0 ? 1 : -1;
-  const score2Start = scores[0][1];
-  const score2End = scores[scores.length - 1][1];
+  const score2Start = scores.length > 0 ? scores[0][1] : 0;
+  const score2End = scores.length > 0 ? scores[scores.length - 1][1] : 0;
   const slopeChange = (score2End - score2Start) * directionPC2;
 
   let slopeTrend = "stable curve shape";
@@ -46,12 +53,12 @@ export const generateInterpretation = (pca: PCAResult, dates: { start: string, e
   // 3. Analyze Curvature (PC3) - Butterfly
   // Middle (5Y) vs Wings (2Y, 10Y)
   const idx5Y = tenors.indexOf('5Y') > -1 ? tenors.indexOf('5Y') : Math.floor(tenors.length / 2);
-  const pc3Loadings = eigenvectors[2];
+  const pc3Loadings = eigenvectors[2] || [];
   // Curvature metric: Mid - (Short + Long)/2
-  const curvatureGradient = pc3Loadings[idx5Y] - (pc3Loadings[idx2Y] + pc3Loadings[idx10Y]) / 2;
+  const curvatureGradient = pc3Loadings.length > 0 ? pc3Loadings[idx5Y] - (pc3Loadings[idx2Y] + pc3Loadings[idx10Y]) / 2 : 0;
   const directionPC3 = curvatureGradient > 0 ? 1 : -1; // +Score = More Hump
-  const score3Start = scores[0][2];
-  const score3End = scores[scores.length - 1][2];
+  const score3Start = scores.length > 0 ? scores[0][2] : 0;
+  const score3End = scores.length > 0 ? scores[scores.length - 1][2] : 0;
   const curvatureChange = (score3End - score3Start) * directionPC3;
 
   let curvatureDesc = "Standard Convexity";

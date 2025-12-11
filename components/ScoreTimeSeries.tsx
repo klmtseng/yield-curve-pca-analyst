@@ -1,5 +1,6 @@
+
 import React from 'react';
-import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid, Legend } from 'recharts';
+import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid, Legend, Brush } from 'recharts';
 import { PCAResult, YieldCurvePoint } from '../types';
 
 interface Props {
@@ -18,16 +19,16 @@ const ScoreTimeSeries: React.FC<Props> = ({ pcaData, rawData }) => {
 
   return (
     <div className="bg-slate-800 p-4 rounded-xl border border-slate-700 shadow-sm h-full flex flex-col">
-      <div className="flex justify-between items-start mb-4">
+      <div className="flex justify-between items-start mb-2">
         <div>
-           <h3 className="text-lg font-semibold text-slate-200">Component Scores Time Series</h3>
-           <p className="text-xs text-slate-400">Evolution of the factors over time (normalized).</p>
+           <h3 className="text-lg font-semibold text-slate-200">Component Scores (Time Series)</h3>
+           <p className="text-xs text-slate-400">Evolution of Level, Slope, and Curvature factors.</p>
         </div>
       </div>
       
       <div className="flex-grow min-h-[250px]">
         <ResponsiveContainer width="100%" height="100%">
-          <AreaChart data={data}>
+          <AreaChart data={data} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
             <defs>
               <linearGradient id="colorPC1" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="5%" stopColor="#38bdf8" stopOpacity={0.3}/>
@@ -44,10 +45,17 @@ const ScoreTimeSeries: React.FC<Props> = ({ pcaData, rawData }) => {
             <Tooltip 
                contentStyle={{ backgroundColor: '#1e293b', borderColor: '#475569', color: '#e2e8f0' }}
             />
-            <Legend />
-            <Area type="monotone" dataKey="PC1" stroke="#38bdf8" fillOpacity={1} fill="url(#colorPC1)" strokeWidth={2} />
-            <Area type="monotone" dataKey="PC2" stroke="#a78bfa" fillOpacity={1} fill="url(#colorPC2)" strokeWidth={2} />
-            <Area type="monotone" dataKey="PC3" stroke="#34d399" fill="none" strokeWidth={1} strokeDasharray="5 5" />
+            <Legend verticalAlign="top" height={36}/>
+            <Area type="monotone" dataKey="PC1" stroke="#38bdf8" fillOpacity={1} fill="url(#colorPC1)" strokeWidth={2} name="PC1 (Level)" />
+            <Area type="monotone" dataKey="PC2" stroke="#a78bfa" fillOpacity={1} fill="url(#colorPC2)" strokeWidth={2} name="PC2 (Slope)" />
+            <Area type="monotone" dataKey="PC3" stroke="#34d399" fill="none" strokeWidth={1.5} strokeDasharray="5 5" name="PC3 (Curvature)" />
+            <Brush 
+              dataKey="date" 
+              height={30} 
+              stroke="#64748b" 
+              fill="#1e293b" 
+              tickFormatter={() => ''}
+            />
           </AreaChart>
         </ResponsiveContainer>
       </div>
