@@ -14,6 +14,8 @@ import AnalysisPanel from './components/AnalysisPanel';
 import YieldSurface from './components/YieldSurface';
 import RollingVarianceChart from './components/RollingVarianceChart';
 import RollingLoadingsSurface from './components/RollingLoadingsSurface';
+import BenchmarkYieldsChart from './components/BenchmarkYieldsChart';
+import RichCheapAnalysis from './components/RichCheapAnalysis';
 import FredDataModal from './components/FredDataModal';
 import DataReviewModal from './components/DataReviewModal';
 
@@ -151,7 +153,7 @@ const App: React.FC = () => {
             onClick={() => setIsFredModalOpen(true)}
             className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg shadow-lg hover:shadow-emerald-500/30 transition-all text-sm font-medium flex items-center gap-2"
           >
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1 4-10z"/></svg>
             FRED Import
           </button>
 
@@ -217,13 +219,29 @@ const App: React.FC = () => {
                <ScoreTimeSeries pcaData={pcaResults} rawData={data} />
             </div>
             
-            {/* Bottom Row: Rolling Variance & Loadings Surface */}
+            {/* Third Row: Rolling Variance & Loadings Surface */}
             <div className="lg:col-span-5 h-[350px]">
                <RollingVarianceChart data={data} tenors={activeTenors} />
             </div>
 
              <div className="lg:col-span-7 h-[350px]">
                <RollingLoadingsSurface data={data} tenors={activeTenors} />
+            </div>
+
+            {/* Bottom Row: Trading Strategy & Benchmarks */}
+            <div className="lg:col-span-12 mt-4 mb-2">
+               <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                 <span className="w-1 h-6 bg-emerald-500 rounded-full"></span>
+                 Trading Strategy & Benchmarks
+               </h2>
+            </div>
+            
+            <div className="lg:col-span-8 h-[350px]">
+               <BenchmarkYieldsChart data={data} />
+            </div>
+
+            <div className="lg:col-span-4 h-[350px]">
+               <RichCheapAnalysis rawData={data} pcaData={pcaResults} />
             </div>
            </>
         )}

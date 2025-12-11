@@ -283,3 +283,71 @@ export const calculateRollingLoadings = (
   }
   return results;
 };
+
+export interface ResidualResult {
+  date: string;
+  tenor: string;
+  actual: number;
+  model: number;
+  residual: number; // actual - model
+  zScore: number;
+}
+
+/**
+ * Calculates the difference between Actual Yields and PCA-Implied Yields (Mean + Scores*Loadings).
+ * This identifies "Rich" (Actual < Model) and "Cheap" (Actual > Model) points.
+ */
+export const calculateLatestResiduals = (
+  rawData: YieldCurvePoint[],
+  pcaResult: PCAResult,
+  numComponents = 3
+): ResidualResult[] => {
+  if (rawData.length === 0) return [];
+  
+  const { meanVector, eigenvectors, scores, tenors } = pcaResult;
+  const lastIdx = rawData.length - 1;
+  const lastDate = rawData[lastIdx].date;
+  
+  // 1. Calculate historical residuals to get std dev for Z-score
+  const allResiduals: number[][] = []; // [tenorIdx][timeIdx]
+  
+  // Initialize arrays
+  for(let t=0; t<tenors.length; t++) allResiduals.push([]);
+
+  for (let i = 0; i < rawData.length; i++) {
+    // Reconstruct row
+    const row = tenors.map(t => Number(rawData[i][t]));
+    const rowScores = scores[i];
+    
+    for (let t = 0; t < tenors.length; t++) {
+      let modelVal = meanVector[t];
+      for (let k = 0; k < numComponents; k++) {
+        modelVal += rowScores[k] * eigenvectors[k][t];
+      }
+      const actualVal = row[t];
+      allResiduals[t].push(actualVal - modelVal);
+    }
+  }
+
+  // 2. Calculate stats and final result for the LAST day
+  return tenors.map((tenor, tIdx) => {
+    const series = allResiduals[tIdx];
+    const latestRes = series[series.length - 1];
+    
+    // Calculate StdDev of this tenor's residuals
+    const meanRes = series.reduce((a,b) => a+b, 0) / series.length;
+    const variance = series.reduce((a,b) => a + Math.pow(b - meanRes, 2), 0) / series.length;
+    const stdDev = Math.sqrt(variance);
+    
+    const actual = Number(rawData[lastIdx][tenor]);
+    
+    return {
+      date: lastDate,
+      tenor,
+      actual,
+      model: actual - latestRes, // actual - residual = model
+      residual: latestRes,
+      zScore: stdDev === 0 ? 0 : latestRes / stdDev
+    };
+  });
+};
