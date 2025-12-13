@@ -143,6 +143,46 @@ const RotatableSurfaceChart: React.FC<Props> = ({ data, tenors, type, width = 60
       };
     };
 
+    // --- DRAW AXES ---
+    const drawAxes = () => {
+      const axisColor = 'rgba(255, 255, 255, 0.5)';
+      const labelColor = '#e2e8f0';
+      ctx.lineWidth = 2;
+      ctx.strokeStyle = axisColor;
+      ctx.fillStyle = labelColor;
+      ctx.font = 'bold 12px Inter, sans-serif';
+
+      const origin = project(0, minVal, 0);
+      const xEnd = project(numTenors, minVal, 0);      // Tenor End
+      const yEnd = project(0, maxVal + padding, 0);    // Yield/Value End
+      const zEnd = project(0, minVal, numDates);       // Time End
+
+      ctx.beginPath();
+      
+      // X-Axis (Tenor)
+      ctx.moveTo(origin.x, origin.y);
+      ctx.lineTo(xEnd.x, xEnd.y);
+      
+      // Y-Axis (Value)
+      ctx.moveTo(origin.x, origin.y);
+      ctx.lineTo(yEnd.x, yEnd.y);
+
+      // Z-Axis (Time)
+      ctx.moveTo(origin.x, origin.y);
+      ctx.lineTo(zEnd.x, zEnd.y);
+      
+      ctx.stroke();
+
+      // Axis Arrowheads/Endpoints
+      // Labels
+      ctx.fillText("Tenor", xEnd.x, xEnd.y);
+      ctx.fillText(type === 'yield' ? "Yield" : "Residual", yEnd.x, yEnd.y - 10);
+      ctx.fillText("Time", zEnd.x, zEnd.y);
+    };
+
+    drawAxes();
+
+
     // Draw Grid Lines
     ctx.lineWidth = 1;
     

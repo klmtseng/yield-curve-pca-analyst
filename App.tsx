@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { generateMockData } from './utils/dataGenerator';
 import { performPCA } from './utils/math';
 import { parseCSV } from './utils/csvParser';
@@ -22,17 +22,62 @@ import RotatableSurfaceChart from './components/RotatableSurfaceChart';
 import BacktestDashboard from './components/BacktestDashboard';
 
 const App: React.FC = () => {
+  // Master Data Source
   const [data, setData] = useState<YieldCurvePoint[]>([]);
   const [activeTenors, setActiveTenors] = useState<Tenor[]>(TENORS);
+  
+  // Analysis Period State
+  const [analysisRange, setAnalysisRange] = useState<{start: string, end: string}>({ start: '', end: '' });
+
+  // Computed Results based on Analysis Period
   const [pcaResults, setPcaResults] = useState<PCAResult | null>(null);
   const [interpretation, setInterpretation] = useState<string>('');
   const [isAnalyzing, setIsAnalyzing] = useState<boolean>(false);
+  
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Modals
   const [isFredModalOpen, setIsFredModalOpen] = useState(false);
   const [isDataModalOpen, setIsDataModalOpen] = useState(false);
   const [isFetchingFred, setIsFetchingFred] = useState(false);
+
+  // Derived Data for Analysis (Reactive)
+  const analysisData = useMemo(() => {
+    if (data.length === 0) return [];
+    if (!analysisRange.start || !analysisRange.end) return data;
+    return data.filter(d => d.date >= analysisRange.start && d.date <= analysisRange.end);
+  }, [data, analysisRange]);
+
+  // Reactive PCA Execution
+  useEffect(() => {
+    if (analysisData.length < 3) {
+      setPcaResults(null);
+      setInterpretation("Insufficient data in selected range (need at least 3 points).");
+      return;
+    }
+
+    const results = performPCA(analysisData, activeTenors);
+    setPcaResults(results);
+    
+    // Auto-analyze
+    const start = analysisData[0].date;
+    const end = analysisData[analysisData.length - 1].date;
+    const text = generateInterpretation(results, { start, end });
+    setInterpretation(text);
+
+  }, [analysisData, activeTenors]);
+
+  // Helper to load new data and reset ranges
+  const handleNewData = (newData: YieldCurvePoint[], newTenors: Tenor[]) => {
+    setData(newData);
+    setActiveTenors(newTenors);
+    if (newData.length > 0) {
+      setAnalysisRange({
+        start: newData[0].date,
+        end: newData[newData.length - 1].date
+      });
+    }
+  };
 
   // Initial Load
   useEffect(() => {
@@ -41,17 +86,8 @@ const App: React.FC = () => {
   }, []);
 
   const handleLoadMockData = useCallback(() => {
-    // 1. Generate Data
-    const mockData = generateMockData(90); // 90 days for better rolling view
-    setData(mockData);
-    setActiveTenors(TENORS);
-
-    // 2. Perform PCA
-    const results = performPCA(mockData, TENORS);
-    setPcaResults(results);
-    
-    // 3. Trigger Analysis
-    handleAnalyze(results, mockData);
+    const mockData = generateMockData(90);
+    handleNewData(mockData, TENORS);
   }, []);
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -63,21 +99,8 @@ const App: React.FC = () => {
       const content = e.target?.result as string;
       try {
         const { data: parsedData, availableTenors } = parseCSV(content);
-        
-        // Update state
-        setData(parsedData);
-        setActiveTenors(availableTenors);
-        
-        // Run PCA on new data
-        const results = performPCA(parsedData, availableTenors);
-        setPcaResults(results);
-        
-        // Reset file input
+        handleNewData(parsedData, availableTenors);
         if (fileInputRef.current) fileInputRef.current.value = '';
-        
-        // Auto analyze new data
-        handleAnalyze(results, parsedData);
-
       } catch (err: any) {
         alert(`Failed to import CSV: ${err.message}`);
       }
@@ -89,34 +112,13 @@ const App: React.FC = () => {
     setIsFetchingFred(true);
     try {
       const { data: fredData, availableTenors } = await fetchFredData(apiKey, startDate);
-      
-      setData(fredData);
-      setActiveTenors(availableTenors);
-      
-      const results = performPCA(fredData, availableTenors);
-      setPcaResults(results);
-      
+      handleNewData(fredData, availableTenors);
       setIsFredModalOpen(false);
-      
-      // Auto analyze new data
-      handleAnalyze(results, fredData);
-      
     } catch (error: any) {
       alert(`FRED Import Failed: ${error.message}`);
     } finally {
       setIsFetchingFred(false);
     }
-  };
-
-  const handleAnalyze = (results: PCAResult, rawData: YieldCurvePoint[]) => {
-    if (!results || rawData.length === 0) return;
-    
-    // Use local interpretation service
-    const start = rawData[0].date;
-    const end = rawData[rawData.length - 1].date;
-    
-    const text = generateInterpretation(results, { start, end });
-    setInterpretation(text);
   };
 
   const triggerFileUpload = () => {
@@ -138,7 +140,7 @@ const App: React.FC = () => {
   return (
     <div className="min-h-screen bg-slate-900 text-slate-200 p-4 md:p-8">
       {/* Header */}
-      <header className="max-w-7xl mx-auto mb-8 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+      <header className="max-w-7xl mx-auto mb-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <h1 className="text-3xl font-bold text-white tracking-tight">Yield Curve <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-500">PCA Analyst</span></h1>
           <p className="text-slate-400 mt-1">Principal Component Analysis for Fixed Income Markets</p>
@@ -172,7 +174,7 @@ const App: React.FC = () => {
             className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg shadow-lg hover:shadow-blue-500/30 transition-all text-sm font-medium flex items-center gap-2"
           >
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
-            View Data & Results
+            View Data
           </button>
 
           <button 
@@ -190,6 +192,38 @@ const App: React.FC = () => {
           </button>
         </div>
       </header>
+
+      {/* Analysis Range Controls */}
+      {data.length > 0 && (
+        <div className="max-w-7xl mx-auto mb-6 bg-slate-800/50 border border-slate-700 rounded-lg p-3 flex flex-col md:flex-row items-center gap-4">
+          <div className="flex items-center gap-2 text-sm text-slate-300">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-blue-400"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+            <span className="font-semibold">Analysis Period:</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <input 
+              type="date" 
+              value={analysisRange.start}
+              min={data[0]?.date}
+              max={analysisRange.end}
+              onChange={(e) => setAnalysisRange(prev => ({ ...prev, start: e.target.value }))}
+              className="bg-slate-900 border border-slate-600 rounded px-2 py-1 text-sm text-white focus:ring-2 focus:ring-blue-500 outline-none"
+            />
+            <span className="text-slate-500">to</span>
+            <input 
+              type="date" 
+              value={analysisRange.end}
+              min={analysisRange.start}
+              max={data[data.length-1]?.date}
+              onChange={(e) => setAnalysisRange(prev => ({ ...prev, end: e.target.value }))}
+              className="bg-slate-900 border border-slate-600 rounded px-2 py-1 text-sm text-white focus:ring-2 focus:ring-blue-500 outline-none"
+            />
+          </div>
+          <div className="text-xs text-slate-500 ml-auto">
+            Points: {analysisData.length} / {data.length}
+          </div>
+        </div>
+      )}
 
       {/* Main Grid */}
       <main className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-6 pb-12">
@@ -212,22 +246,27 @@ const App: React.FC = () => {
                <AnalysisPanel 
                  text={interpretation} 
                  isLoading={isAnalyzing} 
-                 onRefresh={() => handleAnalyze(pcaResults, data)} 
+                 onRefresh={() => {
+                   const start = analysisData[0].date;
+                   const end = analysisData[analysisData.length - 1].date;
+                   const text = generateInterpretation(pcaResults, { start, end });
+                   setInterpretation(text);
+                 }} 
                />
             </div>
 
             {/* Middle Row: Scores Time Series */}
             <div className="lg:col-span-12 h-[350px]">
-               <ScoreTimeSeries pcaData={pcaResults} rawData={data} />
+               <ScoreTimeSeries pcaData={pcaResults} rawData={analysisData} />
             </div>
             
             {/* Third Row: Rolling Variance & Loadings Surface */}
             <div className="lg:col-span-6 h-[350px]">
-               <RollingVarianceChart data={data} tenors={activeTenors} />
+               <RollingVarianceChart data={analysisData} tenors={activeTenors} />
             </div>
 
              <div className="lg:col-span-6 h-[350px]">
-               <RollingLoadingsSurface data={data} tenors={activeTenors} />
+               <RollingLoadingsSurface data={analysisData} tenors={activeTenors} />
             </div>
 
             {/* NEW SECTION: 3D Visualization */}
@@ -241,7 +280,7 @@ const App: React.FC = () => {
             <div className="lg:col-span-6 h-[400px]">
                {/* 3D Yield Curve */}
                <RotatableSurfaceChart 
-                  data={data} 
+                  data={analysisData} 
                   tenors={activeTenors} 
                   type="yield" 
                   height={400} 
@@ -252,7 +291,7 @@ const App: React.FC = () => {
             <div className="lg:col-span-6 h-[400px]">
                {/* 3D Rich/Cheap Surface */}
                <RotatableSurfaceChart 
-                  data={data} 
+                  data={analysisData} 
                   tenors={activeTenors} 
                   type="residual" 
                   height={400}
@@ -269,14 +308,14 @@ const App: React.FC = () => {
             </div>
             
             <div className="lg:col-span-8 h-[350px]">
-               <BenchmarkYieldsChart data={data} />
+               <BenchmarkYieldsChart data={analysisData} />
             </div>
 
             <div className="lg:col-span-4 h-[350px]">
-               <RichCheapAnalysis rawData={data} pcaData={pcaResults} />
+               <RichCheapAnalysis rawData={analysisData} pcaData={pcaResults} />
             </div>
 
-            {/* Backtester Panel */}
+            {/* Backtester Panel - PASSING FULL DATA HERE so user can backtest any period */}
             <div className="lg:col-span-12 h-[450px]">
                <BacktestDashboard data={data} tenors={activeTenors} />
             </div>
@@ -297,11 +336,11 @@ const App: React.FC = () => {
         loading={isFetchingFred}
       />
       
-      {/* Data Review Modal */}
+      {/* Data Review Modal using analysisData */}
       <DataReviewModal
         isOpen={isDataModalOpen}
         onClose={() => setIsDataModalOpen(false)}
-        data={data}
+        data={analysisData}
         pcaResult={pcaResults}
         activeTenors={activeTenors}
       />
